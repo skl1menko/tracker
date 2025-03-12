@@ -62,6 +62,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("com.google.maps.android:maps-compose:4.2.0") // Jetpack Compose для карт
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
 
 }
