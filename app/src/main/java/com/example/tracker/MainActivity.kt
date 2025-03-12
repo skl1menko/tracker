@@ -65,6 +65,12 @@ class MainActivity : ComponentActivity() {
                             startService(it)
                         }
                     },
+                    clearDatabase = {
+                        scope.launch {
+                            database.locationDao().clearLocations()
+                            locations = emptyList() // Очищаем список на UI
+                        }
+                    },
                     locations = locations
                 )
             }
@@ -75,6 +81,7 @@ class MainActivity : ComponentActivity() {
     fun Screen(
         startTracking: () -> Unit,
         stopTracking: () -> Unit,
+        clearDatabase: () -> Unit,
         locations: List<LocationEntity>
     ) {
         Column(
@@ -110,6 +117,12 @@ class MainActivity : ComponentActivity() {
 
             Button(onClick = stopTracking) {
                 Text(text = "Stop Tracking")
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(onClick = clearDatabase, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) {
+                Text(text = "Clear Database")
             }
 
             Spacer(modifier = Modifier.height(32.dp))
