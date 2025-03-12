@@ -6,27 +6,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import com.example.tracker.LocationDatabase
+import com.example.tracker.LocationEntity
 import com.example.tracker.ui.theme.TrackerTheme
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
     private val locationManager by lazy {
         LocationManager(applicationContext)
     }
@@ -37,27 +32,56 @@ class MainActivity : ComponentActivity() {
         Manifest.permission.POST_NOTIFICATIONS,
     )
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ActivityCompat.requestPermissions(
-            this, permissions, 100
-        )
+        ActivityCompat.requestPermissions(this, permissions, 100)
         enableEdgeToEdge()
+
+        val database = LocationDatabase.getDatabase(applicationContext)
+
         setContent {
             TrackerTheme {
-                Screen()
+                val scope = rememberCoroutineScope()
+                var locations by remember { mutableStateOf<List<LocationEntity>>(emptyList()) }
+
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        database.locationDao().getAllLocations().collectLatest {
+                            locations = it
+                        }
+                    }
+                }
+
+                Screen(
+                    startTracking = {
+                        Intent(applicationContext, LocationTrackerService::class.java).also {
+                            it.action = LocationTrackerService.Action.START.name
+                            startService(it)
+                        }
+                    },
+                    stopTracking = {
+                        Intent(applicationContext, LocationTrackerService::class.java).also {
+                            it.action = LocationTrackerService.Action.STOP.name
+                            startService(it)
+                        }
+                    },
+                    locations = locations
+                )
             }
         }
     }
+
     @Composable
-    fun Screen() {
+    fun Screen(
+        startTracking: () -> Unit,
+        stopTracking: () -> Unit,
+        locations: List<LocationEntity>
+    ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
             var locationText by remember {
                 mutableStateOf("")
             }
@@ -78,44 +102,26 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(50.dp))
 
-            Button(
-                onClick = {
-                    Intent(
-                        applicationContext, LocationTrackerService::class.java
-                    ).also {
-                        it.action = LocationTrackerService.Action.START.name
-                        startService(it)
-                    }
-                }
-            ) {
+            Button(onClick = startTracking) {
                 Text(text = "Start Tracking")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = {
-                    Intent(
-                        applicationContext, LocationTrackerService::class.java
-                    ).also {
-                        it.action = LocationTrackerService.Action.STOP.name
-                        startService(it)
-                    }
-                }
-            ) {
+            Button(onClick = stopTracking) {
                 Text(text = "Stop Tracking")
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LazyColumn {
+                items(locations) { location ->
+                    Text(
+                        text = "Lat: ${location.latitude}, Lng: ${location.longitude}",
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
         }
-    }
-}
-
-
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TrackerTheme {
     }
 }
