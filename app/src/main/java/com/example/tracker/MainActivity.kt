@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import com.example.tracker.LocationDatabase
@@ -20,6 +21,13 @@ import com.example.tracker.LocationEntity
 import com.example.tracker.ui.theme.TrackerTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
 
 class MainActivity : ComponentActivity() {
     private val locationManager by lazy {
@@ -84,6 +92,9 @@ class MainActivity : ComponentActivity() {
         clearDatabase: () -> Unit,
         locations: List<LocationEntity>
     ) {
+
+        var mapReady by remember { mutableStateOf(false) }
+        val cameraPositionState = rememberCameraPositionState()
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,6 +102,34 @@ class MainActivity : ComponentActivity() {
         ) {
             var locationText by remember {
                 mutableStateOf("")
+            }
+            GoogleMap(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp),
+                cameraPositionState = cameraPositionState,
+                onMapLoaded = { mapReady = true }
+            ) {
+                if (mapReady && locations.isNotEmpty()) {
+                    val startLocation = LatLng(locations.first().latitude, locations.first().longitude)
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(startLocation, 15f)
+
+                    Polyline(
+                        points = locations.map { LatLng(it.latitude, it.longitude) },
+                        color = Color.Blue,
+                        width = 5f
+                    )
+
+                    Marker(
+                        state = MarkerState(position = startLocation),
+                        title = "Start"
+                    )
+
+                    Marker(
+                        state = MarkerState(position = LatLng(locations.last().latitude, locations.last().longitude)),
+                        title = "End"
+                    )
+                }
             }
 
             Text(text = locationText)
